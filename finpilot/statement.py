@@ -16,7 +16,8 @@ import pandas as pd
 
 COLUMN_ALIASES = {
     "date": ["Дата операции", "date", "Дата"],
-    "amount": ["Сумма операции", "Сумма платежа", "amount", "Сумма"],
+    # «Сумма платежа» — в валюте счёта; «Сумма операции» может быть в долларах при покупке за границей
+    "amount": ["Сумма платежа", "Сумма операции", "amount", "Сумма"],
     "description": ["Описание", "description", "Назначение"],
     "mcc": ["MCC", "mcc"],
     "bank_category": ["Категория", "category"],
@@ -48,6 +49,13 @@ def _to_number(s: pd.Series) -> pd.Series:
     return pd.to_numeric(cleaned.str.replace(",", ".", regex=False), errors="coerce")
 
 
+def parse_dates(s: pd.Series) -> pd.Series:
+    """ISO (2026-09-12) читаем как ISO, остальное — день первым (12.09.2026 — так пишут банки)."""
+    iso = pd.to_datetime(s, format="ISO8601", errors="coerce")
+    rest = pd.to_datetime(s[iso.isna()], dayfirst=True, format="mixed", errors="coerce")
+    return iso.fillna(rest)
+
+
 def normalize_merchant(description: str) -> str:
     """«PYATEROCHKA 6123 MOSCOW RUS» → «pyaterochka moscow rus»: без цифр, номеров терминалов и лишних символов."""
     s = str(description).lower()
@@ -62,6 +70,8 @@ def load_statement(path: str | Path) -> pd.DataFrame:
     if not path.exists():
         raise FileNotFoundError(f"Файл не найден: {path}")
     text = _read_text(path)
+    if not text.strip():
+        raise ValueError(f"Файл пустой: {path}")
     sep = ";" if text.splitlines()[0].count(";") > text.splitlines()[0].count(",") else ","
     df = pd.read_csv(io.StringIO(text), sep=sep, dtype=str)
     cols = list(df.columns)
@@ -73,7 +83,7 @@ def load_statement(path: str | Path) -> pd.DataFrame:
     if pick["status"]:
         df = df[df[pick["status"]].fillna("OK").str.upper().isin(["OK", "SUCCESS", "ВЫПОЛНЕНО"])]
     out = pd.DataFrame({
-        "date": pd.to_datetime(df[pick["date"]], dayfirst=True, errors="coerce", format="mixed"),
+        "date": parse_dates(df[pick["date"]]),
         "amount": _to_number(df[pick["amount"]]),
         "description": df[pick["description"]].fillna("").str.strip(),
         "mcc": df[pick["mcc"]].fillna("").str.strip() if pick["mcc"] else "",

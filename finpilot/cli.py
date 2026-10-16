@@ -8,16 +8,18 @@ import argparse
 import sys
 
 from . import open_statement
-from .analytics import money
+from .analytics import money, plural
 
 
 def report(path: str, month: str | None) -> str:
     s = open_statement(path)
     ov = s.overview()
     cat = s.spending_by_category(month)
-    lines = [f"Выписка: {ov['operations']} операций, {ov['period']}", "",
+    n = ov["operations"]
+    same_day = " к тому же числу" if cat["compared_to_same_day"] else ""
+    lines = [f"Выписка: {n} {plural(n, 'операция', 'операции', 'операций')}, {ov['period']}", "",
              f"Расходы за {cat['month']}{'' if cat['complete'] else ' (по ' + cat['data_until'] + ')'}: {money(cat['total_spent'])}"
-             + (f"  (в {cat['previous_month']}: {money(cat['previous_total'])})" if cat["previous_month"] else ""), ""]
+             + (f"  (в {cat['previous_month']}{same_day}: {money(cat['previous_total'])})" if cat["previous_month"] else ""), ""]
     for c in cat["categories"]:
         delta = "" if c["vs_prev_month"] is None else f"{c['vs_prev_month']:+.0%}"
         lines.append(f"  {c['category']:<26}{money(c['spent']):>12}  {c['share']:>5.0%}  {delta:>6}")
@@ -44,7 +46,10 @@ def main() -> None:
     a = p.parse_args()
     if hasattr(sys.stdout, "reconfigure"):          # консоль Windows по умолчанию не в UTF-8
         sys.stdout.reconfigure(encoding="utf-8")
-    print(report(a.path, a.month))
+    try:
+        print(report(a.path, a.month))
+    except (ValueError, FileNotFoundError) as e:
+        sys.exit(f"finpilot: {e}")
 
 
 if __name__ == "__main__":

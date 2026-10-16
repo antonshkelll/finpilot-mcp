@@ -42,7 +42,8 @@ KEYWORDS = {
     "Красота": ["летуаль", "золотое яблоко", "барбершоп", "barber", "салон", "маникюр", "рив гош"],
     "Маркетплейсы и магазины": ["ozon", "озон", "wildberries", "вайлдберриз", "wb ", "яндекс маркет", "market.yandex",
                                 "мегамаркет", "aliexpress", "avito", "авито", "lamoda"],
-    "Переводы": ["перевод", "transfer", "сбп ", "по номеру телефона"],
+    # «Оплата СБП …» — это покупка у мерчанта, а не перевод, поэтому «сбп» здесь нет
+    "Переводы": ["перевод", "transfer", "по номеру телефона"],
 }
 
 # Категории Т-Банка → наши (если банк уже определил категорию, доверяем ему)
@@ -69,10 +70,14 @@ def by_mcc(mcc: str) -> str | None:
     return None
 
 
+def _norm(s: str) -> str:
+    return str(s).lower().replace("ё", "е")
+
+
 def by_keywords(text: str) -> str | None:
-    t = f" {str(text).lower()} "
+    t = f" {_norm(text)} "
     for cat, words in KEYWORDS.items():
-        if any(w in t for w in words):
+        if any(_norm(w) in t for w in words):
             return cat
     return None
 

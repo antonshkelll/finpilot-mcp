@@ -83,3 +83,82 @@ def test_mcp_server_end_to_end():
             assert "Яндекс Плюс" in text and "Telegram Premium" in text
 
     asyncio.run(run())
+
+
+# ---------- случаи из реальных выписок ----------
+def write(tmp_path, name, text, enc="utf-8"):
+    f = tmp_path / name
+    f.write_bytes(text.encode(enc))
+    return f
+
+
+def test_iso_dates_are_not_swapped(tmp_path):
+    f = write(tmp_path, "iso.csv", "date,amount,description\n2026-09-01,-100,A\n2026-09-12,-100,B\n2026-08-02,-100,C\n")
+    st = open_statement(f)
+    assert list(st.df.date.dt.strftime("%d.%m")) == ["02.08", "01.09", "12.09"]
+    assert st.months() == ["2026-08", "2026-09"]
+
+
+def test_tbank_foreign_currency_uses_account_amount(tmp_path):
+    head = '"Дата операции";"Статус";"Сумма операции";"Валюта операции";"Сумма платежа";"Валюта платежа";"Категория";"MCC";"Описание"\n'
+    row = '"03.09.2026 12:00:00";"OK";"-12,00";"USD";"-1 140,00";"RUB";"Цифровые товары";"5816";"Steam"\n'
+    st = open_statement(write(tmp_path, "tb.csv", head + row, "cp1251"))
+    assert st.df.amount.iloc[0] == -1140.0
+
+
+def test_sbp_merchant_payment_counts_as_spending(tmp_path):
+    f = write(tmp_path, "sbp.csv", "date,amount,description\n2026-09-01,-2500,Оплата СБП ООО «Кухня на районе»\n"
+                                   "2026-09-02,-1000,Перевод по номеру телефона +7 9** ***-11-22\n")
+    s = open_statement(f).spending_by_category("2026-09")
+    assert s["total_spent"] == 2500          # перевод не трата, оплата по СБП — трата
+
+
+def test_yo_in_merchant_names(tmp_path):
+    f = write(tmp_path, "yo.csv", "date,amount,description\n2026-09-01,-500,Пятёрочка\n2026-09-02,-700,Перекрёсток\n")
+    cats = {c["category"] for c in open_statement(f).spending_by_category()["categories"]}
+    assert cats == {"Продукты"}
+
+
+def test_forecast_on_short_statement(tmp_path):
+    rows = "\n".join(f"2026-09-{d:02d},-{4000 / 15:.2f},Кафе" for d in range(1, 16))
+    f = write(tmp_path, "short.csv", "date,amount,description\n" + rows + "\n")
+    fc = open_statement(f).forecast_month()
+    assert fc["days_left"] == 15
+    assert fc["forecast_total"] == pytest.approx(8000, rel=0.01)
+
+
+def test_cancelled_subscription_is_not_reported(tmp_path):
+    rows = ["2026-02-05,-399,Яндекс Плюс", "2026-03-05,-399,Яндекс Плюс", "2026-04-05,-399,Яндекс Плюс",
+            "2026-09-20,-100,Кафе"]
+    st = open_statement(write(tmp_path, "subs.csv", "date,amount,description\n" + "\n".join(rows) + "\n"))
+    assert st.subscriptions() == []
+
+
+def test_empty_and_header_only_files(tmp_path):
+    with pytest.raises(ValueError, match="пустой"):
+        load_statement(write(tmp_path, "empty.csv", ""))
+    with pytest.raises(ValueError, match="нет ни одной операции"):
+        open_statement(write(tmp_path, "head.csv", "date,amount,description\n"))
+
+
+def test_cli_prints_clear_error(tmp_path, capsys):
+    import sys
+
+    from finpilot import cli
+    sys.argv = ["finpilot", "report", str(tmp_path / "missing.csv")]
+    with pytest.raises(SystemExit) as e:
+        cli.main()
+    assert "Файл не найден" in str(e.value)
+
+
+def test_partial_month_compared_to_same_day(st):
+    s = st.spending_by_category("2026-09")
+    assert s["compared_to_same_day"] and s["previous_month"] == "2026-08"
+    aug_to_20 = st.expenses[(st.expenses.month == "2026-08") & (st.expenses.date.dt.day <= 20)].spent.sum()
+    assert s["previous_total"] == pytest.approx(aug_to_20, abs=0.01)
+
+
+def test_plural():
+    from finpilot.analytics import plural
+    assert [plural(n, "операция", "операции", "операций") for n in (1, 2, 5, 11, 21, 392, 112)] == \
+        ["операция", "операции", "операций", "операций", "операция", "операции", "операций"]
