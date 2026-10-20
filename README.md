@@ -1,5 +1,7 @@
 # finpilot
 
+[![CI](https://github.com/antonshkelll/finpilot-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/antonshkelll/finpilot-mcp/actions/workflows/ci.yml) ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
+
 Локальная аналитика банковской выписки: куда ушли деньги, какие подписки списываются, нет ли странных операций и сколько уйдёт до конца месяца.
 
 Работает двумя способами:
@@ -151,3 +153,10 @@ finpilot/
 - PDF-выписки (например, у Сбера) пока не читаются: сначала их нужно перевести в CSV.
 - Категории по ключевым словам настроены под российские сервисы, а редкие мерчанты попадут в «Прочее».
 - Подписка определяется по трём и более похожим списаниям с регулярным интервалом, поэтому новая подписка появится в отчёте только через три месяца.
+
+## Связанные проекты
+
+- [TxGPT](https://github.com/antonshkelll/txgpt-llm-from-scratch) — категоризация операций языковой моделью
+- [Subly](https://github.com/antonshkelll/Subly) — трекер подписок для Android
+
+Все проекты — в [профиле](https://github.com/antonshkelll).
