@@ -115,7 +115,9 @@ finpilot report examples\sample_statement.csv
 ### Claude Code
 
 ```bash
-claude mcp add finpilot --env FINPILOT_STATEMENT=/path/to/statement.csv -- /path/to/.venv/bin/finpilot-mcp
+claude mcp add finpilot \
+  --env FINPILOT_STATEMENT=/path/to/statement.csv \
+  -- /path/to/.venv/bin/finpilot-mcp
 ```
 
 ### Cursor
@@ -137,7 +139,8 @@ claude mcp add finpilot --env FINPILOT_STATEMENT=/path/to/statement.csv -- /path
 
 ```bash
 pip install -e ".[dev]"
-pytest -q                          # 19 тестов: реальные форматы выписок и сквозной тест MCP-сервера
+# 19 тестов: реальные форматы выписок и сквозной тест MCP-сервера
+pytest -q
 python examples/make_sample.py     # пересоздать тестовую выписку
 ```
 
@@ -162,3 +165,4 @@ finpilot/
 - [Subly](https://github.com/antonshkelll/Subly): трекер подписок для Android
 
 Все проекты собраны в [профиле](https://github.com/antonshkelll).
+
