@@ -1,3 +1,7 @@
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/portfolio-dark.svg"><img src="assets/portfolio-light.svg" width="100%" alt="finpilot-mcp"></picture>
+
+[Профиль](https://github.com/antonshkelll) · [Портфолио](https://antonshkel.ru)
+
 # finpilot
 
 [![CI](https://github.com/antonshkelll/finpilot-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/antonshkelll/finpilot-mcp/actions/workflows/ci.yml) ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
